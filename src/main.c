@@ -137,16 +137,13 @@
 #pragma comment(linker, "/export:EOS_Connect_CopyIdToken=" ORIGINAL_DLL ".EOS_Connect_CopyIdToken,@136")
 #pragma comment(linker, "/export:EOS_Connect_CopyProductUserExternalAccountByAccountId=" ORIGINAL_DLL ".EOS_Connect_CopyProductUserExternalAccountByAccountId,@137")
 #pragma comment(linker, "/export:EOS_Connect_CopyProductUserExternalAccountByAccountType=" ORIGINAL_DLL ".EOS_Connect_CopyProductUserExternalAccountByAccountType,@138")
-#pragma comment(linker, "/export:EOS_Connect_CopyProductUserExternalAccountByIndex=" ORIGINAL_DLL ".EOS_Connect_CopyProductUserExternalAccountByIndex,@139")
 #pragma comment(linker, "/export:EOS_Connect_CopyProductUserInfo=" ORIGINAL_DLL ".EOS_Connect_CopyProductUserInfo,@140")
 #pragma comment(linker, "/export:EOS_Connect_CreateUser=" ORIGINAL_DLL ".EOS_Connect_CreateUser,@142")
 #pragma comment(linker, "/export:EOS_Connect_DeleteDeviceId=" ORIGINAL_DLL ".EOS_Connect_DeleteDeviceId,@143")
-#pragma comment(linker, "/export:EOS_Connect_ExternalAccountInfo_Release=" ORIGINAL_DLL ".EOS_Connect_ExternalAccountInfo_Release,@144")
 #pragma comment(linker, "/export:EOS_Connect_GetExternalAccountMapping=" ORIGINAL_DLL ".EOS_Connect_GetExternalAccountMapping,@145")
 #pragma comment(linker, "/export:EOS_Connect_GetLoggedInUserByIndex=" ORIGINAL_DLL ".EOS_Connect_GetLoggedInUserByIndex,@146")
 #pragma comment(linker, "/export:EOS_Connect_GetLoggedInUsersCount=" ORIGINAL_DLL ".EOS_Connect_GetLoggedInUsersCount,@147")
 #pragma comment(linker, "/export:EOS_Connect_GetLoginStatus=" ORIGINAL_DLL ".EOS_Connect_GetLoginStatus,@148")
-#pragma comment(linker, "/export:EOS_Connect_GetProductUserExternalAccountCount=" ORIGINAL_DLL ".EOS_Connect_GetProductUserExternalAccountCount,@149")
 #pragma comment(linker, "/export:EOS_Connect_GetProductUserIdMapping=" ORIGINAL_DLL ".EOS_Connect_GetProductUserIdMapping,@150")
 #pragma comment(linker, "/export:EOS_Connect_IdToken_Release=" ORIGINAL_DLL ".EOS_Connect_IdToken_Release,@151")
 #pragma comment(linker, "/export:EOS_Connect_LinkAccount=" ORIGINAL_DLL ".EOS_Connect_LinkAccount,@152")
@@ -672,6 +669,10 @@
 #pragma comment(linker, "/export:EOS_Connect_CreateDeviceId=" ORIGINAL_DLL ".EOS_Connect_CreateDeviceId,@141")
 #pragma comment(linker, "/export:EOS_Platform_Create=" ORIGINAL_DLL ".EOS_Platform_Create,@398")
 #pragma comment(linker, "/export:EOS_Auth_Login=" ORIGINAL_DLL ".EOS_Auth_Login,@110")
+
+// #pragma comment(linker, "/export:EOS_Connect_CopyProductUserExternalAccountByIndex=" ORIGINAL_DLL ".EOS_Connect_CopyProductUserExternalAccountByIndex,@139")
+// #pragma comment(linker, "/export:EOS_Connect_GetProductUserExternalAccountCount=" ORIGINAL_DLL ".EOS_Connect_GetProductUserExternalAccountCount,@149")
+// #pragma comment(linker, "/export:EOS_Connect_ExternalAccountInfo_Release=" ORIGINAL_DLL ".EOS_Connect_ExternalAccountInfo_Release,@144")
 // #pragma comment(linker, "/export:EOS_Connect_Login=" ORIGINAL_DLL ".EOS_Connect_Login,@153")
 
 #include "steam.h"
@@ -717,6 +718,26 @@ typedef struct {
 	void* ClientData;
 } EOS_Connect_CreateDeviceIdCallbackInfo;
 
+typedef struct {
+	int32_t ApiVersion;
+	void* TargetUserId;
+	uint32_t ExternalAccountInfoIndex;
+} EOS_Connect_CopyProductUserExternalAccountByIndexOptions;
+
+typedef struct {
+	int32_t ApiVersion; // currently: 1
+	void* ProductUserId;
+	const char* DisplayName;
+	const char* AccountId;
+	int32_t AccountIdType;
+	int64_t LastLoginTime;
+} EOS_Connect_ExternalAccountInfo;
+
+typedef struct {
+    int32_t ApiVersion;
+    void* TargetUserId;
+} EOS_Connect_GetProductUserExternalAccountCountOptions;
+
 // -----------------------------------------
 
 typedef struct {
@@ -730,6 +751,12 @@ typedef struct {
     int32_t ConnectLoginApiVersion;
     int32_t CredentialsApiVersion;
 } CallbackData;
+
+// -----------------------------------------
+// PATCHES SECTION
+// -----------------------------------------
+
+// -------- EOS_Connect_Login PATCH
 
 void EOS_Connect_Login_callback(EOS_Connect_LoginCallbackInfo *Info) {
     LogCall("CALLBACK --- EOS_Connect_Login", _ReturnAddress());
@@ -822,6 +849,62 @@ extern __declspec(dllexport) void EOS_Connect_Login(void* Handle, EOS_Connect_Lo
 
     fp_EOS_CreateDeviceIdoriginal(Handle, &options, data, (void *) &EOS_Connect_CreateDeviceId_callback);    
 }
+
+// -------- EOS_Connect_GetProductUserExternalAccountCount +
+// -------- EOS_Connect_CopyProductUserExternalAccountByIndex +
+// -------- EOS_Connect_ExternalAccountInfo_Release PATCH
+
+extern __declspec(dllexport) uint32_t EOS_Connect_GetProductUserExternalAccountCount(void* Handle, EOS_Connect_GetProductUserExternalAccountCountOptions* Options) {
+    LogCall("EOS_Connect_GetProductUserExternalAccountCount", _ReturnAddress());
+
+    typedef uint32_t(__cdecl* fn_t)(void *, void *);
+    fn_t g_fp_EOS_original = (fn_t) GetProcAddress(g_hOrig, "EOS_Connect_GetProductUserExternalAccountCount");
+    uint32_t ret = g_fp_EOS_original(Handle, Options);
+    LogText("--- Return [original]: %u (If this is 0, then game is returned 1)", ret);
+    return ret == 0 ? 1 : ret;
+}
+
+extern __declspec(dllexport) int32_t EOS_Connect_CopyProductUserExternalAccountByIndex(
+    void* Handle,
+    const EOS_Connect_CopyProductUserExternalAccountByIndexOptions* Options,
+    EOS_Connect_ExternalAccountInfo ** OutExternalAccountInfo
+) {
+    LogCall("EOS_Connect_CopyProductUserExternalAccountByIndex", _ReturnAddress());
+    typedef int32_t(__cdecl* fn_t)(void *, const EOS_Connect_CopyProductUserExternalAccountByIndexOptions *, EOS_Connect_ExternalAccountInfo **);
+    fn_t g_fp_EOS_original = (fn_t) GetProcAddress(g_hOrig, "EOS_Connect_CopyProductUserExternalAccountByIndex");
+    int32_t ret = g_fp_EOS_original(Handle, Options, OutExternalAccountInfo);
+    LogText("--- Return [original]: %d", ret);
+
+    if (ret == 18) { // EOS_NotFound
+        EOS_Connect_ExternalAccountInfo *info = malloc(sizeof(EOS_Connect_ExternalAccountInfo));
+        info->ApiVersion = 1;
+        info->ProductUserId = Options->TargetUserId;
+        info->DisplayName = "";
+        info->AccountId = "";
+        info->AccountIdType = 1; // EOS_EAT_STEAM
+        info->LastLoginTime = 649; // Magic number to identify faked data when application calls _Release
+        *OutExternalAccountInfo = info;
+        ret = 1;
+        LogText("--- Return [modified]: %d", ret);
+    }
+
+    
+    return ret;
+}
+
+extern __declspec(dllexport) void EOS_Connect_ExternalAccountInfo_Release(EOS_Connect_ExternalAccountInfo* ExternalAccountInfo) {
+    if (ExternalAccountInfo && ExternalAccountInfo->LastLoginTime == 649) {
+        free(ExternalAccountInfo);
+        return;
+    }
+    typedef void(__cdecl* fn_t)(void *);
+    fn_t g_fp_EOS_original = (fn_t) GetProcAddress(g_hOrig, "EOS_Connect_ExternalAccountInfo_Release");
+    g_fp_EOS_original(ExternalAccountInfo);
+}
+
+// -----------------------------------------
+// END OF PATCHES SECTION
+// -----------------------------------------
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
     switch (reason) {
