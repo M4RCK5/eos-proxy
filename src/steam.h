@@ -78,7 +78,7 @@ static ISteamClient *Steam_GetSteamClient(HSteamPipe *hPipe, HSteamUser *hUser) 
     return pClient;
 }
 
-static const char* Steam_GetPersonaName() {
+static const char* Steam_GetPersonaName(void) {
     HSteamPipe hPipe;
     HSteamUser hUser;
     ISteamClient *pClient = Steam_GetSteamClient(&hPipe, &hUser);
