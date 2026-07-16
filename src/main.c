@@ -405,7 +405,7 @@
 #pragma comment(linker, "/export:EOS_P2P_SetPortRange=" ORIGINAL_DLL ".EOS_P2P_SetPortRange")
 #pragma comment(linker, "/export:EOS_P2P_SetRelayControl=" ORIGINAL_DLL ".EOS_P2P_SetRelayControl")
 #pragma comment(linker, "/export:EOS_Platform_CheckForLauncherAndRestart=" ORIGINAL_DLL ".EOS_Platform_CheckForLauncherAndRestart")
-#pragma comment(linker, "/export:EOS_Platform_Create=" ORIGINAL_DLL ".EOS_Platform_Create")
+// #pragma comment(linker, "/export:EOS_Platform_Create=" ORIGINAL_DLL ".EOS_Platform_Create")
 #pragma comment(linker, "/export:EOS_Platform_GetAchievementsInterface=" ORIGINAL_DLL ".EOS_Platform_GetAchievementsInterface")
 #pragma comment(linker, "/export:EOS_Platform_GetActiveCountryCode=" ORIGINAL_DLL ".EOS_Platform_GetActiveCountryCode")
 #pragma comment(linker, "/export:EOS_Platform_GetActiveLocaleCode=" ORIGINAL_DLL ".EOS_Platform_GetActiveLocaleCode")
@@ -861,6 +861,48 @@ extern __declspec(dllexport) void EOS_Connect_Login(void* Handle, EOS_Connect_Lo
 
     fp_EOS_CreateDeviceIdoriginal(Handle, &options, data, (void *) &EOS_Connect_CreateDeviceId_callback);
 }
+
+// -----------------------------------------
+// EOS_Platform_Create
+
+typedef struct {
+	const char* ClientId;
+	const char* ClientSecret;
+} EOS_Platform_ClientCredentials;
+
+typedef struct {
+	int32_t ApiVersion;
+	void* Reserved;
+	const char* ProductId;
+	const char* SandboxId;
+	EOS_Platform_ClientCredentials ClientCredentials;
+	int32_t bIsServer;
+	const char* EncryptionKey;
+	const char* OverrideCountryCode;
+	const char* OverrideLocaleCode;
+	const char* DeploymentId;
+	uint64_t Flags;
+	const char* CacheDirectory;
+	uint32_t TickBudgetInMilliseconds;
+	const void* RTCOptions;
+	void* IntegratedPlatformOptionsContainerHandle;
+	const void* SystemSpecificOptions;
+	double* TaskNetworkTimeoutSeconds;
+} EOS_Platform_Options;
+
+extern __declspec(dllexport) void* EOS_Platform_Create(EOS_Platform_Options* Options) {
+    if (Options->IntegratedPlatformOptionsContainerHandle != NULL) {
+        LogCall("EOS_Platform_Create", _ReturnAddress());
+        LogText("Forcing IntegratedPlatformOptionsContainerHandle to NULL");
+        Options->IntegratedPlatformOptionsContainerHandle = NULL;
+    }
+
+    typedef void*(__cdecl* fn_t)(void *);
+    fn_t g_fp_EOS_original = (fn_t) GetProcAddress(g_hOrig, "EOS_Platform_Create");
+    return g_fp_EOS_original(Options);
+}
+
+// -----------------------------------------
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
     switch (reason) {
