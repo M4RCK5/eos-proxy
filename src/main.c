@@ -727,7 +727,7 @@ typedef struct {
 } EOS_Connect_Credentials;
 
 typedef struct {
-	int32_t ApiVersion; // currently: 2
+	int32_t ApiVersion; // latest is 2, but we'll use 1 for compatibility
 	const char* DisplayName;
 	const char* NsaIdToken;
 } EOS_Connect_UserLoginInfo;
@@ -809,7 +809,7 @@ void EOS_Connect_CreateDeviceId_callback(EOS_Connect_CreateDeviceIdCallbackInfo 
     };
 
     EOS_Connect_UserLoginInfo userLoginInfo = {
-        .ApiVersion = 2,
+        .ApiVersion = 1,
         .NsaIdToken = NULL,
         .DisplayName = personaName
     };
