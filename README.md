@@ -32,4 +32,4 @@ I've only tested this with a few games.
 Developers can choose to disable this login option. Therefore this proxy is not going to work for every game. This work isn't original at all, so here are some credits:
 
 - Online-Fix for the approach used. Others may have done it but my approach is entirely based on their fixes.
-- Functions for logging (in `common.h`) and fetching Steam ID / persona name (in `steam.h`) are slop (by Claude)
+- Functions for logging (in `logger.c`) and fetching Steam ID / persona name (in `steam.h`) are slop (by Claude)

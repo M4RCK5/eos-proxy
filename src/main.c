@@ -712,9 +712,14 @@
 #pragma comment(linker, "/export:src_simple=" ORIGINAL_DLL ".src_simple")
 #pragma comment(linker, "/export:src_strerror=" ORIGINAL_DLL ".src_strerror")
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "logger.h"
 #include "steam.h"
-#include "common.h"
-#include <intrin.h>
 
 static HMODULE g_hOrig = NULL;
 
@@ -771,7 +776,7 @@ typedef struct {
 } CallbackData;
 
 void EOS_Connect_Login_callback(EOS_Connect_LoginCallbackInfo *Info) {
-    LogCall("CALLBACK --- EOS_Connect_Login", _ReturnAddress());
+    LogCall("CALLBACK --- EOS_Connect_Login");
     if (Info->ResultCode != 0) {
         LogText("ERROR when calling EOS_Connect_Login : %d", Info->ResultCode);
         MessageBox(NULL, "ERROR when calling EOS_Connect_Login. Check logs.", NULL, 0);
@@ -789,7 +794,7 @@ void EOS_Connect_Login_callback(EOS_Connect_LoginCallbackInfo *Info) {
 }
 
 void EOS_Connect_CreateDeviceId_callback(EOS_Connect_CreateDeviceIdCallbackInfo *Info) {
-    LogCall("CALLBACK --- EOS_Connect_CreateDeviceId", _ReturnAddress());
+    LogCall("CALLBACK --- EOS_Connect_CreateDeviceId");
 
     if (Info->ResultCode != 0 && Info->ResultCode != 24) {
         LogText("ERROR when calling EOS_Connect_CreateDeviceId : %d", Info->ResultCode);
@@ -826,7 +831,7 @@ void EOS_Connect_CreateDeviceId_callback(EOS_Connect_CreateDeviceIdCallbackInfo 
 }
 
 extern __declspec(dllexport) void EOS_Connect_Login(void* Handle, EOS_Connect_LoginOptions* Options, void* ClientData, void* CompletionDelegate) {
-    LogCall("EOS_Connect_Login", _ReturnAddress());
+    LogCall("EOS_Connect_Login");
 
     const EOS_Connect_Credentials* creds = Options->Credentials;
     LogText("EOS_Connect_Login | Type: %d", creds->Type);
@@ -892,7 +897,7 @@ typedef struct {
 
 extern __declspec(dllexport) void* EOS_Platform_Create(EOS_Platform_Options* Options) {
     if (Options->IntegratedPlatformOptionsContainerHandle != NULL) {
-        LogCall("EOS_Platform_Create", _ReturnAddress());
+        LogCall("EOS_Platform_Create");
         LogText("Forcing IntegratedPlatformOptionsContainerHandle to NULL");
         Options->IntegratedPlatformOptionsContainerHandle = NULL;
     }
@@ -926,30 +931,15 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
 
         g_hOrig = LoadLibraryA(ORIGINAL_DLL);
         if (!g_hOrig) {
-            char err[256];
-            _snprintf_s(err, sizeof(err), _TRUNCATE,
-                "[PROXY] FATAL: could not load " ORIGINAL_DLL " (error %lu)\r\n",
-                GetLastError());
-            OutputDebugStringA(err);
-            DWORD written;
-            if (g_hLog != INVALID_HANDLE_VALUE)
-                WriteFile(g_hLog, err, (DWORD)strlen(err), &written, NULL);
-            return FALSE;
+            LogText("[PROXY] FATAL: could not load " ORIGINAL_DLL " (error %lu)", GetLastError());
         } else {
-            char ok[256];
-            _snprintf_s(ok, sizeof(ok), _TRUNCATE,
-                "[PROXY] Loaded " ORIGINAL_DLL " at 0x%p\r\n", g_hOrig);
-            OutputDebugStringA(ok);
-            DWORD written;
-            if (g_hLog != INVALID_HANDLE_VALUE)
-                WriteFile(g_hLog, ok, (DWORD)strlen(ok), &written, NULL);
+            LogText("[PROXY] Loaded " ORIGINAL_DLL " at 0x%p", g_hOrig);
         }
         break;
 
     case DLL_PROCESS_DETACH:
         if (g_hOrig) FreeLibrary(g_hOrig);
-        if (g_hLog != INVALID_HANDLE_VALUE) CloseHandle(g_hLog);
-        DeleteCriticalSection(&g_cs);
+        EndLog();
         break;
     }
     return TRUE;

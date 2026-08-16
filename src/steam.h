@@ -1,6 +1,9 @@
 #pragma once
 
-#include "common.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <stdint.h>
+#include "logger.h"
 
 // Steam helper functions to fetch user persona name and steam ID.
 
