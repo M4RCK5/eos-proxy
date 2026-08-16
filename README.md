@@ -18,7 +18,9 @@ A stupid simple Epic Online Services "proxy" that enables multiplayer functional
 I've only tested this with a few games.
 
 - Sledding Game
-- SpiderHeck (this one has an incompatibility with gbe_fork. Use the other two options.)
+- Big Walk
+- SpiderHeck (incompatible with gbe_fork)
+- Agent 64: Spies Never Die (incompatible with uc-online2)
 - Absolum (needs some additional changes. Check the `absolum` branch.)
 
 # How it works
@@ -26,10 +28,18 @@ I've only tested this with a few games.
 - All games that use EOS first call a `EOS_Connect_Login` function to initialize networking features. Since Epic supports a wide variety of platforms, they have many different authentication choices.
 - This proxy just intercepts that function call, and swaps the authentication type from `EOS_ECT_STEAM_SESSION_TICKET` (which requires a valid steam auth ticket) to `EOS_ECT_DEVICEID_ACCESS_TOKEN` (which requires nothing. it's a game-specific and device-specific token.). There is a bit more code to prepare the device id access token, but that's all.
 
+### EAC Workaround
+
+This experimental feature is intended for games that completely disable their online features when launched without EAC.
+
+EAC Bootstrapper blocks proxy DLLs meaning EOS-Proxy will never work with EAC active. Instead, you must launch the game with EAC disabled. This workaround for EAC is not designed to play on official servers or lobbies from unmodified clients as they check if you have EAC active. **You should only play with users that have EOS-Proxy applied.**
+
+Note that some games only use Epic Online Services for EAC and handle networking via Steamworks (such as Agent 64: Spies Never Die). In such cases, gbe_fork players and Spacewar players cannot play together.
 
 # Disclaimer / Credits
 
-Developers can choose to disable this login option. Therefore this proxy is not going to work for every game. This work isn't original at all, so here are some credits:
+Developers can choose to disable the DeviceID login option. Therefore this proxy is not going to work for every game. This work isn't original at all, so here are some credits:
 
 - Online-Fix for the approach used. Others may have done it but my approach is entirely based on their fixes.
+- [veeeanti](https://github.com/veeeanti/) for helping with the EAC workaround.
 - Functions for logging (in `logger.c`) and fetching Steam ID / persona name (in `steam.h`) are slop (by Claude)
